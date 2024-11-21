@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useTranslate } from "@/context/TranslateContext"
-import { translate } from "@/lib/openai"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Checkbox } from "@/components/ui/checkbox"
-import { chunkJsonObject, mergeTranslatedChunks } from "@/lib/json-utils"
-import { ChevronDown, Languages, Loader2 } from "lucide-react"
-import { getDictionary } from "@/lib/getDictionary"
-import { validateApiKey } from "@/lib/openai"
+import { useState, useEffect } from "react";
+import { useTranslate } from "@/context/TranslateContext";
+import { translate } from "@/lib/openai";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { chunkJsonObject, mergeTranslatedChunks } from "@/lib/json-utils";
+import { ChevronDown, Languages, Loader2 } from "lucide-react";
+import { getDictionary } from "@/lib/getDictionary";
+import { validateApiKey } from "@/lib/openai";
 
 interface TranslatedResult {
   lang: string;
@@ -70,17 +70,19 @@ interface TranslatePanelProps {
 }
 
 export function TranslatePanel({ dict }: TranslatePanelProps) {
-  const [error, setError] = useState("")
-  const { toast } = useToast()
-  const [controller, setController] = useState<AbortController | null>(null)
-  const [totalChunks, setTotalChunks] = useState(0)
-  const [completedChunks, setCompletedChunks] = useState(0)
-  const [showMoreLanguages, setShowMoreLanguages] = useState(false)
+  const [error, setError] = useState("");
+  const { toast } = useToast();
+  const [controller, setController] = useState<AbortController | null>(null);
+  const [totalChunks, setTotalChunks] = useState(0);
+  const [completedChunks, setCompletedChunks] = useState(0);
+  const [showMoreLanguages, setShowMoreLanguages] = useState(false);
 
-  const { 
-    file, 
+  const {
+    file,
     apiKey,
     setApiKey,
+    baseURL,
+    extraPrompt,
     isTranslating,
     setIsTranslating,
     setTranslatedContent,
@@ -99,22 +101,22 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
     totalProgress,
     estimatedTime,
     setTotalProgress,
-    setEstimatedTime
-  } = useTranslate()
+    setEstimatedTime,
+  } = useTranslate();
 
-  type TranslatePanelKey = keyof typeof dict.translatePanel | 'apiKeyErrors.invalidFormat' | 'apiKeyErrors.invalidOrExpired' | 'apiKeyErrors.rateLimitReached' | 'apiKeyErrors.validationFailed';
+  type TranslatePanelKey = keyof typeof dict.translatePanel | "apiKeyErrors.invalidFormat" | "apiKeyErrors.invalidOrExpired" | "apiKeyErrors.rateLimitReached" | "apiKeyErrors.validationFailed";
 
   const getTranslation = (key: TranslatePanelKey, defaultValue: string) => {
-    if (key.includes('.')) {
-      const [parent, child] = key.split('.');
+    if (key.includes(".")) {
+      const [parent, child] = key.split(".");
       return (dict?.translatePanel?.[parent as keyof typeof dict.translatePanel] as any)?.[child] || defaultValue;
     }
     const value = dict?.translatePanel?.[key as keyof typeof dict.translatePanel];
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       return !value || value.trim() === "" ? defaultValue : value;
     }
     return value || defaultValue;
-  }
+  };
 
   // 添加默认值处理
   const translations = {
@@ -137,7 +139,7 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
     overallProgress: getTranslation("overallProgress", "Overall Progress"),
     translatingLanguage: getTranslation("translatingLanguage", "Translating Language"),
     completedSegments: getTranslation("completedSegments", "Completed Segments"),
-    languages: dict?.jsonPreview?.languages || {},  // 从 jsonPreview 中获取语言映射
+    languages: dict?.jsonPreview?.languages || {}, // 从 jsonPreview 中获取语言映射
     bytes: "B",
     kb: "KB",
     mb: "MB",
@@ -146,9 +148,9 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
       invalidFormat: getTranslation("apiKeyErrors.invalidFormat", "Invalid API Key format"),
       invalidOrExpired: getTranslation("apiKeyErrors.invalidOrExpired", "Invalid or expired API Key"),
       rateLimitReached: getTranslation("apiKeyErrors.rateLimitReached", "API call limit reached"),
-      validationFailed: getTranslation("apiKeyErrors.validationFailed", "API Key validation failed")
-    }
-  }
+      validationFailed: getTranslation("apiKeyErrors.validationFailed", "API Key validation failed"),
+    },
+  };
 
   // Common languages (top 20 most common languages)
   const commonLanguages = [
@@ -169,7 +171,7 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
     { value: "nl", label: translations.languages["nl"] || "Dutch" },
     { value: "id", label: translations.languages["id"] || "Indonesian" },
     { value: "ko", label: translations.languages["ko"] || "Korean" },
-    { value: "th", label: translations.languages["th"] || "Thai" }
+    { value: "th", label: translations.languages["th"] || "Thai" },
   ];
 
   // More languages
@@ -195,7 +197,7 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
     { value: "et", label: translations.languages["et"] || "Estonian" },
     { value: "cs", label: translations.languages["cs"] || "Czech" },
     { value: "ca", label: translations.languages["ca"] || "Catalan" },
-    
+
     // Asian languages
     { value: "hi", label: translations.languages["hi"] || "Hindi" },
     { value: "bn", label: translations.languages["bn"] || "Bengali" },
@@ -210,60 +212,60 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
     { value: "km", label: translations.languages["km"] || "Khmer" },
     { value: "lo", label: translations.languages["lo"] || "Lao" },
     { value: "mn", label: translations.languages["mn"] || "Mongolian" },
-    
+
     // Other languages
     { value: "az", label: translations.languages["az"] || "Azerbaijani" },
     { value: "ka", label: translations.languages["ka"] || "Georgian" },
     { value: "hy", label: translations.languages["hy"] || "Armenian" },
     { value: "sw", label: translations.languages["sw"] || "Swahili" },
     { value: "af", label: translations.languages["af"] || "Afrikaans" },
-    { value: "am", label: translations.languages["am"] || "Amharic" }
+    { value: "am", label: translations.languages["am"] || "Amharic" },
   ];
 
   const formatTime = (seconds: number) => {
-    if (seconds < 60) return `${Math.ceil(seconds)} seconds`
-    return `${Math.ceil(seconds / 60)} minutes`
-  }
+    if (seconds < 60) return `${Math.ceil(seconds)} seconds`;
+    return `${Math.ceil(seconds / 60)} minutes`;
+  };
 
   const handleTranslationError = (err: any) => {
     setError(err.message || "Translation failed");
     toast({
       variant: "destructive",
       title: translations.errorTitle,
-      description: err.message || "Translation failed"
+      description: err.message || "Translation failed",
     });
-  }
+  };
 
   const handleTranslate = async () => {
     if (!file || !apiKey) {
       toast({
         variant: "destructive",
         title: translations.errorTitle,
-        description: "Please upload a file and enter API Key"
+        description: "Please upload a file and enter API Key",
       });
       return;
     }
 
     // 添加API密钥验证
     try {
-      await validateApiKey(apiKey);
+      await validateApiKey(apiKey, baseURL);
     } catch (err) {
       let errorMessage = translations.apiKeyErrors.validationFailed;
-      
+
       if (err instanceof Error) {
-        if (err.message.includes('format')) {
+        if (err.message.includes("format")) {
           errorMessage = translations.apiKeyErrors.invalidFormat;
-        } else if (err.message.includes('expired')) {
+        } else if (err.message.includes("expired")) {
           errorMessage = translations.apiKeyErrors.invalidOrExpired;
-        } else if (err.message.includes('limit')) {
+        } else if (err.message.includes("limit")) {
           errorMessage = translations.apiKeyErrors.rateLimitReached;
         }
       }
-      
+
       toast({
         variant: "destructive",
         title: translations.errorTitle,
-        description: errorMessage
+        description: errorMessage,
       });
       return;
     }
@@ -276,30 +278,30 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
     setCancelTranslation(false);
 
     const startTime = Date.now();
-    
+
     try {
       const content = await readFileContent(file);
       const jsonContent = JSON.parse(content);
-      
+
       const savedProgress = localStorage.getItem(`translation_progress_${file.name}`);
       const savedChunks = savedProgress ? JSON.parse(savedProgress) : {};
-      
+
       const chunks = chunkJsonObject(jsonContent, {
         maxKeys: 50,
         maxSize: 4000,
-        preserveStructure: true
+        preserveStructure: true,
       });
-      
+
       const calculatedTotalChunks = chunks.length * selectedLangs.length;
       setTotalChunks(calculatedTotalChunks);
       let currentCompletedChunks = 0;
       setCompletedChunks(currentCompletedChunks);
-      
+
       const results: TranslatedResult[] = [...translatedResults];
-      
+
       // Get languages that have been completely translated
       const completedLangs = translatedResults
-        .filter(result => {
+        .filter((result) => {
           try {
             // Check if the translation content is complete
             const translatedContent = JSON.parse(result.content);
@@ -310,16 +312,16 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
             return false;
           }
         })
-        .map(result => result.lang);
+        .map((result) => result.lang);
 
       // Filter out languages that haven't been translated
-      const remainingLangs = selectedLangs.filter(lang => !completedLangs.includes(lang));
+      const remainingLangs = selectedLangs.filter((lang) => !completedLangs.includes(lang));
 
       // If all selected languages are already translated
       if (remainingLangs.length === 0) {
         toast({
           title: translations.tip,
-          description: translations.allLanguagesTranslated
+          description: translations.allLanguagesTranslated,
         });
         return;
       }
@@ -327,26 +329,26 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
       // Only translate languages that haven't been completed
       for (const lang of remainingLangs) {
         if (cancelTranslation) break;
-        
+
         setCurrentTranslatingLang(lang);
         const translatedChunks: Record<string, any>[] = [];
         const savedLangChunks = savedChunks[lang] || [];
-        
+
         // Initialize the translated content for the current language
         let currentLangContent = mergeTranslatedChunks(savedLangChunks);
-        
+
         // If there's already saved content, add it to the results
         if (Object.keys(currentLangContent).length > 0) {
-          const resultIndex = results.findIndex(r => r.lang === lang);
+          const resultIndex = results.findIndex((r) => r.lang === lang);
           if (resultIndex !== -1) {
             results[resultIndex] = {
               lang,
-              content: JSON.stringify(currentLangContent, null, 2)
+              content: JSON.stringify(currentLangContent, null, 2),
             };
           } else {
             results.push({
               lang,
-              content: JSON.stringify(currentLangContent, null, 2)
+              content: JSON.stringify(currentLangContent, null, 2),
             });
           }
           setTranslatedResults([...results]);
@@ -354,118 +356,110 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
 
         for (let i = savedLangChunks.length; i < chunks.length; i++) {
           if (cancelTranslation) {
-            break
+            break;
           }
-          
+
           try {
-            const chunk = chunks[i]
-            const translatedChunk = await translate(
-              JSON.stringify(chunk),
-              lang,
-              apiKey,
-              controller.signal,
-              (progress) => {
-                const singleChunkProgress = progress / 100
-                const overallProgress = ((currentCompletedChunks + singleChunkProgress) / calculatedTotalChunks) * 100
-                setTotalProgress(Math.round(overallProgress))
+            const chunk = chunks[i];
+            const translatedChunk = await translate({
+              text: JSON.stringify(chunk),
+              targetLang: lang,
+              apiKey: apiKey,
+              baseURL: baseURL,
+              extraPrompt: extraPrompt,
+              signal: controller.signal,
+              onProgress: (progress) => {
+                const singleChunkProgress = progress / 100;
+                const overallProgress = ((currentCompletedChunks + singleChunkProgress) / calculatedTotalChunks) * 100;
+                setTotalProgress(Math.round(overallProgress));
               },
-              (content) => {
-                setStreamContent(content)
+              onStream: (content) => {
+                setStreamContent(content);
                 try {
                   // 如果翻译被取消，不进行 JSON 解析
-                  if (cancelTranslation) return
-                  
-                  const parsedStreamContent = JSON.parse(`{${content}}`)
-                  const mergedContent = mergeTranslatedChunks([
-                    currentLangContent,
-                    parsedStreamContent
-                  ])
-                  
-                  const resultIndex = results.findIndex(r => r.lang === lang)
+                  if (cancelTranslation) return;
+
+                  const parsedStreamContent = JSON.parse(`{${content}}`);
+                  const mergedContent = mergeTranslatedChunks([currentLangContent, parsedStreamContent]);
+
+                  const resultIndex = results.findIndex((r) => r.lang === lang);
                   if (resultIndex !== -1) {
                     results[resultIndex] = {
                       lang,
-                      content: JSON.stringify(mergedContent, null, 2)
-                    }
+                      content: JSON.stringify(mergedContent, null, 2),
+                    };
                   } else {
                     results.push({
                       lang,
-                      content: JSON.stringify(mergedContent, null, 2)
-                    })
+                      content: JSON.stringify(mergedContent, null, 2),
+                    });
                   }
-                  setTranslatedResults([...results])
+                  setTranslatedResults([...results]);
                 } catch (error) {
                   // 如果是取消操作，忽略错误
-                  if (cancelTranslation) return
-                  
-                  console.warn('Stream content parse error:', error)
+                  if (cancelTranslation) return;
+
+                  console.warn("Stream content parse error:", error);
                 }
-              }
-            )
-            
+              },
+            });
+
             // 如果翻译被取消，跳出循环
             if (!translatedChunk || cancelTranslation) {
-              break
+              break;
             }
 
-            const parsedChunk = JSON.parse(translatedChunk)
-            translatedChunks.push(parsedChunk)
-            
-            currentLangContent = mergeTranslatedChunks([
-              currentLangContent,
-              parsedChunk
-            ])
+            const parsedChunk = JSON.parse(translatedChunk);
+            translatedChunks.push(parsedChunk);
 
-            const resultIndex = results.findIndex(r => r.lang === lang)
+            currentLangContent = mergeTranslatedChunks([currentLangContent, parsedChunk]);
+
+            const resultIndex = results.findIndex((r) => r.lang === lang);
             if (resultIndex !== -1) {
               results[resultIndex] = {
                 lang,
-                content: JSON.stringify(currentLangContent, null, 2)
-              }
+                content: JSON.stringify(currentLangContent, null, 2),
+              };
             } else {
               results.push({
                 lang,
-                content: JSON.stringify(currentLangContent, null, 2)
-              })
+                content: JSON.stringify(currentLangContent, null, 2),
+              });
             }
-            setTranslatedResults([...results])
-            
-            savedChunks[lang] = translatedChunks
-            localStorage.setItem(
-              `translation_progress_${file.name}`,
-              JSON.stringify(savedChunks)
-            )
-            
-            currentCompletedChunks++
-            setCompletedChunks(currentCompletedChunks)
+            setTranslatedResults([...results]);
+
+            savedChunks[lang] = translatedChunks;
+            localStorage.setItem(`translation_progress_${file.name}`, JSON.stringify(savedChunks));
+
+            currentCompletedChunks++;
+            setCompletedChunks(currentCompletedChunks);
           } catch (error) {
             // 如果是取消操作，跳出循环
-            if (cancelTranslation || (error instanceof DOMException && error.name === 'AbortError')) {
-              break
+            if (cancelTranslation || (error instanceof DOMException && error.name === "AbortError")) {
+              break;
             }
             // 其他错误则继续处理下一个块
-            continue
+            continue;
           }
         }
       }
-      
+
       // Clear saved progress
       localStorage.removeItem(`translation_progress_${file.name}`);
-      
+
       // 只有在非取消状态下才显示完成提示
       if (!cancelTranslation) {
         toast({
           title: translations.successTitle,
-          description: translations.translationCompleted
+          description: translations.translationCompleted,
         });
       }
-      
     } catch (err) {
       handleTranslationError(err);
     } finally {
       setIsTranslating(false);
       setProgress(0);
-      setStreamContent('');
+      setStreamContent("");
       setCurrentTranslatingLang(null);
       setEstimatedTime(0); // Reset estimated time
       setCompletedChunks(0);
@@ -474,26 +468,26 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
 
   const handleCancel = () => {
     if (controller) {
-      controller.abort()
-      setController(null)
+      controller.abort();
+      setController(null);
     }
-    setCancelTranslation(true)
-    setIsTranslating(false)
-    setProgress(0)
-    setTotalProgress(0)
-    setTotalChunks(0)
-    setCurrentTranslatingLang(null)
-    setStreamContent("")
+    setCancelTranslation(true);
+    setIsTranslating(false);
+    setProgress(0);
+    setTotalProgress(0);
+    setTotalChunks(0);
+    setCurrentTranslatingLang(null);
+    setStreamContent("");
     // 清除保存的进度
     if (file) {
-      localStorage.removeItem(`translation_progress_${file.name}`)
+      localStorage.removeItem(`translation_progress_${file.name}`);
     }
     toast({
       title: translations.cancelled,
-      description: translations.translationCancelled
-    })
-    setCompletedChunks(0)
-  }
+      description: translations.translationCancelled,
+    });
+    setCompletedChunks(0);
+  };
 
   // Add a function to check saved progress
   const checkSavedProgress = (fileName: string) => {
@@ -501,7 +495,7 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
     if (savedProgress) {
       return {
         hasSavedProgress: true,
-        progress: JSON.parse(savedProgress)
+        progress: JSON.parse(savedProgress),
       };
     }
     return { hasSavedProgress: false, progress: null };
@@ -515,11 +509,7 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
         toast({
           title: translations.foundUnfinished,
           description: translations.continueTranslation,
-          action: (
-            <Button onClick={handleTranslate}>
-              {translations.continueTranslation}
-            </Button>
-          )
+          action: <Button onClick={handleTranslate}>{translations.continueTranslation}</Button>,
         });
       }
     }
@@ -531,43 +521,36 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
   }, []);
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return `0 ${translations.bytes}`
-    const k = 1024
-    const sizes = [
-      translations.bytes,
-      translations.kb,
-      translations.mb,
-      translations.gb
-    ]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
+    if (bytes === 0) return `0 ${translations.bytes}`;
+    const k = 1024;
+    const sizes = [translations.bytes, translations.kb, translations.mb, translations.gb];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
 
   // 添加类型检查
-  type SupportedLanguage = typeof commonLanguages[number]['value'] | typeof moreLanguages[number]['value'];
+  type SupportedLanguage = (typeof commonLanguages)[number]["value"] | (typeof moreLanguages)[number]["value"];
 
   // 检查翻译是否完整
   useEffect(() => {
-    const allLanguages = [...commonLanguages, ...moreLanguages].map(l => l.value)
-    const missingTranslations = allLanguages.filter(lang => !translations.languages[lang])
+    const allLanguages = [...commonLanguages, ...moreLanguages].map((l) => l.value);
+    const missingTranslations = allLanguages.filter((lang) => !translations.languages[lang]);
     if (missingTranslations.length > 0) {
       // 删除这个警告日志
       // console.warn('Missing translations for languages:', missingTranslations)
     }
-  }, [translations.languages])
+  }, [translations.languages]);
 
   return (
     <div className="space-y-4">
       <div>
         <div className="grid grid-cols-3 gap-2 mt-1">
           {/* Common languages */}
-          {commonLanguages.map(option => (
-            <label 
-              key={option.value} 
+          {commonLanguages.map((option) => (
+            <label
+              key={option.value}
               className={`flex items-center justify-center px-4 py-2 rounded-full cursor-pointer transition-colors text-sm ${
-                selectedLangs.includes(option.value) 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted hover:bg-muted/80'
+                selectedLangs.includes(option.value) ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"
               }`}
             >
               <input
@@ -576,9 +559,9 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
                 checked={selectedLangs.includes(option.value)}
                 onChange={(e) => {
                   if (e.target.checked) {
-                    setSelectedLangs([...selectedLangs, option.value])
+                    setSelectedLangs([...selectedLangs, option.value]);
                   } else {
-                    setSelectedLangs(selectedLangs.filter(l => l !== option.value))
+                    setSelectedLangs(selectedLangs.filter((l) => l !== option.value));
                   }
                 }}
               />
@@ -588,30 +571,19 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
         </div>
 
         {/* Expand/collapse button */}
-        <Button
-          variant="outline"
-          className="mt-4 w-full rounded-full shadow-none border-none"
-          onClick={() => setShowMoreLanguages(!showMoreLanguages)}
-        >
-          {showMoreLanguages 
-            ? translations.hideMoreLanguages 
-            : translations.showMoreLanguages
-          }
-          <ChevronDown 
-            className={`ml-2 h-4 w-4 transform ${showMoreLanguages ? "rotate-180" : ""}`} 
-          />
+        <Button variant="outline" className="mt-4 w-full rounded-full shadow-none border-none" onClick={() => setShowMoreLanguages(!showMoreLanguages)}>
+          {showMoreLanguages ? translations.hideMoreLanguages : translations.showMoreLanguages}
+          <ChevronDown className={`ml-2 h-4 w-4 transform ${showMoreLanguages ? "rotate-180" : ""}`} />
         </Button>
 
         {/* More languages */}
         {showMoreLanguages && (
           <div className="grid grid-cols-3 gap-2 mt-2">
-            {moreLanguages.map(option => (
-              <label 
-                key={option.value} 
+            {moreLanguages.map((option) => (
+              <label
+                key={option.value}
                 className={`flex items-center justify-center px-4 py-2 rounded-full cursor-pointer transition-colors text-sm ${
-                  selectedLangs.includes(option.value) 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-muted hover:bg-muted/80'
+                  selectedLangs.includes(option.value) ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"
                 }`}
               >
                 <input
@@ -620,9 +592,9 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
                   checked={selectedLangs.includes(option.value)}
                   onChange={(e) => {
                     if (e.target.checked) {
-                      setSelectedLangs([...selectedLangs, option.value])
+                      setSelectedLangs([...selectedLangs, option.value]);
                     } else {
-                      setSelectedLangs(selectedLangs.filter(l => l !== option.value))
+                      setSelectedLangs(selectedLangs.filter((l) => l !== option.value));
                     }
                   }}
                 />
@@ -632,47 +604,47 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
           </div>
         )}
       </div>
-      {error && (
-        <div className="text-red-500 text-sm">{error}</div>
-      )}
+      {error && <div className="text-red-500 text-sm">{error}</div>}
 
       {isTranslating && (
         <div className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span>{translations.overallProgress} ({totalProgress}%)</span>
-              <span>{translations.completedSegments}: {completedChunks}/{totalChunks || 1}</span>
+              <span>
+                {translations.overallProgress} ({totalProgress}%)
+              </span>
+              <span>
+                {translations.completedSegments}: {completedChunks}/{totalChunks || 1}
+              </span>
             </div>
             <Progress value={totalProgress} className="w-full" />
           </div>
-          
+
           {currentTranslatingLang && (
             <div className="text-sm text-muted-foreground">
-              {translations.translatingLanguage}: {
-                commonLanguages.find(opt => opt.value === currentTranslatingLang)?.label || currentTranslatingLang
-              }
+              {translations.translatingLanguage}: {commonLanguages.find((opt) => opt.value === currentTranslatingLang)?.label || currentTranslatingLang}
             </div>
           )}
         </div>
       )}
 
       <div className="flex gap-2">
-        <Button 
-          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-full shadow-none" 
+        <Button
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium rounded-full shadow-none"
           onClick={() => {
             if (!file) {
               toast({
                 variant: "destructive",
                 title: translations.errorTitle,
-                description: translations.uploadFirst
+                description: translations.uploadFirst,
               });
               return;
             }
             if (!apiKey) {
               toast({
-                variant: "destructive", 
+                variant: "destructive",
                 title: translations.errorTitle,
-                description: translations.enterApiKey
+                description: translations.enterApiKey,
               });
               return;
             }
@@ -696,17 +668,11 @@ export function TranslatePanel({ dict }: TranslatePanelProps) {
         </Button>
 
         {isTranslating && (
-          <Button 
-            variant="outline"
-            onClick={handleCancel}
-            className="w-24 py-6 shadow-none rounded-full"
-          >
+          <Button variant="outline" onClick={handleCancel} className="w-24 py-6 shadow-none rounded-full">
             {translations.cancel}
           </Button>
         )}
       </div>
-
-      
     </div>
-  )
-} 
+  );
+}
