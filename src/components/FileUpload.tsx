@@ -1,10 +1,12 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useTranslate } from "@/context/TranslateContext";
 import { useToast } from "@/hooks/use-toast";
 import { parseJson } from "@/lib/json-utils";
-import { UploadIcon, FileJson2Icon, KeyIcon, Languages, FileIcon } from "lucide-react";
+import { ChevronDown, UploadIcon, FileJson2Icon, KeyIcon, Languages, FileIcon } from "lucide-react";
 import { useState } from "react";
 
 interface FileUploadProps {
@@ -33,6 +35,7 @@ interface FileUploadProps {
 
 export function FileUpload({ dict }: FileUploadProps) {
   const [isUploaded, setIsUploaded] = useState(false);
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [fileInfo, setFileInfo] = useState<{ name: string; size: string } | null>(null);
   const { toast } = useToast();
   const { setFile, apiKey, setApiKey, baseURL, setBaseURL, extraPrompt, setExtraPrompt, resetTranslation } = useTranslate();
@@ -160,8 +163,18 @@ export function FileUpload({ dict }: FileUploadProps) {
         </h2>
         <p className="text-xs text-muted-foreground pb-2">{dict.apiKeyTip || "Tips: OpenAI API Key is required for translation."}</p>
         <Input type="password" placeholder={dict.apiKeyPlaceholder || "sk-..."} className="mt-1 shadow-none" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
-        <Input type="text" placeholder="baseURL" className="mt-1 shadow-none" value={baseURL} onChange={(e) => setBaseURL(e.target.value)} />
-        <Input type="text" placeholder="extraPrompt" className="mt-1 shadow-none" value={extraPrompt} onChange={(e) => setExtraPrompt(e.target.value)} />
+
+        <Button variant="outline" className="mt-4 w-full rounded-full shadow-none border-none" onClick={() => setShowMoreOptions(!showMoreOptions)}>
+          {showMoreOptions ? "showMoreOptions" : "hideMoreOptions"}
+          <ChevronDown className={`ml-2 h-4 w-4 transform ${showMoreOptions ? "rotate-180" : ""}`} />
+        </Button>
+
+        {showMoreOptions && (
+          <>
+            <Input type="text" placeholder="baseURL" className="mt-1 shadow-none" value={baseURL} onChange={(e) => setBaseURL(e.target.value)} />
+            <Textarea rows={4} placeholder="extraPrompt" className="mt-1 shadow-none" value={extraPrompt} onChange={(e) => setExtraPrompt(e.target.value)} />
+          </>
+        )}
       </div>
     </div>
   );
