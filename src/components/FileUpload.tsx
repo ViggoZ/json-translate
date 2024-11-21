@@ -165,7 +165,7 @@ export function FileUpload({ dict }: FileUploadProps) {
         <Input type="password" placeholder={dict.apiKeyPlaceholder || "sk-..."} className="mt-1 shadow-none" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
 
         <Button variant="outline" className="mt-4 w-full rounded-full shadow-none border-none" onClick={() => setShowMoreOptions(!showMoreOptions)}>
-          {showMoreOptions ? "showMoreOptions" : "hideMoreOptions"}
+          {showMoreOptions ? "hideMoreOptions" : "showMoreOptions"}
           <ChevronDown className={`ml-2 h-4 w-4 transform ${showMoreOptions ? "rotate-180" : ""}`} />
         </Button>
 
